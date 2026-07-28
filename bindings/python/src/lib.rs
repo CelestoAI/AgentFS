@@ -28,6 +28,8 @@ struct VolumeInfo {
     dev: bool,
     #[pyo3(get)]
     mountpoint: Option<String>,
+    #[pyo3(get)]
+    read_only: bool,
 }
 
 #[pyclass]
@@ -106,13 +108,14 @@ impl PySmolFs {
             .map_err(to_py_err)
     }
 
-    #[pyo3(signature = (name, path, *, foreground=false, check_storage=false))]
+    #[pyo3(signature = (name, path, *, foreground=false, check_storage=false, read_only=false))]
     fn mount(
         &self,
         name: String,
         path: String,
         foreground: bool,
         check_storage: bool,
+        read_only: bool,
     ) -> PyResult<MountInfo> {
         self.inner
             .mount(MountVolume {
@@ -120,6 +123,7 @@ impl PySmolFs {
                 path: PathBuf::from(path),
                 foreground,
                 check_storage,
+                readonly: read_only,
             })
             .map(MountInfo::from)
             .map_err(to_py_err)
@@ -154,6 +158,7 @@ impl From<smolfs_core::VolumeInfo> for VolumeInfo {
             bucket: value.bucket,
             dev: value.dev,
             mountpoint: value.mountpoint.map(|path| path.display().to_string()),
+            read_only: value.read_only,
         }
     }
 }

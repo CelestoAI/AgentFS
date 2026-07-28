@@ -11,6 +11,8 @@ pub struct Volume {
     pub bucket: String,
     pub dev: bool,
     pub mountpoint: Option<PathBuf>,
+    #[serde(default)]
+    pub read_only: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -31,6 +33,7 @@ pub struct MountVolume {
     pub path: PathBuf,
     pub foreground: bool,
     pub check_storage: bool,
+    pub readonly: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +50,7 @@ pub struct VolumeInfo {
     pub bucket: String,
     pub dev: bool,
     pub mountpoint: Option<PathBuf>,
+    pub read_only: bool,
 }
 
 impl From<&Volume> for VolumeInfo {
@@ -58,6 +62,7 @@ impl From<&Volume> for VolumeInfo {
             bucket: volume.bucket.clone(),
             dev: volume.dev,
             mountpoint: volume.mountpoint.clone(),
+            read_only: volume.read_only,
         }
     }
 }
@@ -88,4 +93,30 @@ pub struct MountSupportReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusReport {
     pub volumes: Vec<VolumeInfo>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Volume, VolumeInfo};
+
+    fn volume(read_only: bool) -> Volume {
+        Volume {
+            name: "demo".into(),
+            backend: "juicefs".into(),
+            metadata_url: "sqlite3://demo.db".into(),
+            storage: "file".into(),
+            bucket: "/tmp/objects".into(),
+            dev: true,
+            mountpoint: None,
+            read_only,
+            created_at: "now".into(),
+            updated_at: "now".into(),
+        }
+    }
+
+    #[test]
+    fn volume_info_carries_read_only() {
+        assert!(VolumeInfo::from(&volume(true)).read_only);
+        assert!(!VolumeInfo::from(&volume(false)).read_only);
+    }
 }

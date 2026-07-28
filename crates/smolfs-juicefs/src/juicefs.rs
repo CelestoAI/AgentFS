@@ -46,6 +46,9 @@ impl JuiceFs {
         if opts.check_storage {
             spec = spec.arg("--check-storage");
         }
+        if opts.readonly {
+            spec = spec.arg("--read-only");
+        }
         spec
     }
 
@@ -97,9 +100,21 @@ impl JuiceFs {
 
 #[cfg(test)]
 mod tests {
-    use smolfs_core::Volume;
+    use std::path::PathBuf;
+
+    use smolfs_core::{MountVolume, Volume};
 
     use super::JuiceFs;
+
+    fn mount_opts(readonly: bool) -> MountVolume {
+        MountVolume {
+            name: "demo".into(),
+            path: PathBuf::from("/tmp/demo"),
+            foreground: false,
+            check_storage: false,
+            readonly,
+        }
+    }
 
     fn volume() -> Volume {
         Volume {
@@ -110,6 +125,7 @@ mod tests {
             bucket: "/tmp/objects".into(),
             dev: true,
             mountpoint: None,
+            read_only: false,
             created_at: "now".into(),
             updated_at: "now".into(),
         }
@@ -122,5 +138,21 @@ mod tests {
         assert_eq!(spec.args[0], "format");
         assert!(spec.args.contains(&"--storage".to_string()));
         assert!(spec.args.contains(&"--bucket".to_string()));
+    }
+
+    #[test]
+    fn mount_command_includes_read_only_when_requested() {
+        let juicefs = JuiceFs::new("/bin/juicefs");
+        let log = PathBuf::from("/tmp/demo.log");
+        let spec = juicefs.mount_spec(&volume(), &mount_opts(true), &log);
+        assert!(spec.args.contains(&"--read-only".to_string()));
+    }
+
+    #[test]
+    fn mount_command_omits_read_only_by_default() {
+        let juicefs = JuiceFs::new("/bin/juicefs");
+        let log = PathBuf::from("/tmp/demo.log");
+        let spec = juicefs.mount_spec(&volume(), &mount_opts(false), &log);
+        assert!(!spec.args.contains(&"--read-only".to_string()));
     }
 }

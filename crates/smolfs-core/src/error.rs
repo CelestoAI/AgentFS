@@ -39,6 +39,9 @@ pub enum SmolFsError {
     #[error("volume {name:?} is not mounted")]
     VolumeNotMounted { name: String },
 
+    #[error("volume {name:?} is mounted read-only")]
+    VolumeReadOnly { name: String },
+
     #[error("local mount support is unavailable: {detail}\nFix: {fix}")]
     MountSupportUnavailable { detail: String, fix: String },
 
