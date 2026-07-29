@@ -131,14 +131,17 @@ jobs:
       - name: Run unit tests
         run: cargo test --workspace
 
-      - name: Run MinIO integration tests
+      - name: Install FUSE for mount integration tests
+        run: sudo apt-get update && sudo apt-get install -y fuse3
+
+      - name: Run JuiceFS integration tests
         env:
           SMOLFS_RUN_INTEGRATION: "1"
           SMOLFS_TEST_REDIS_METADATA_URL: redis://127.0.0.1:6379/1
           SMOLFS_TEST_S3_BUCKET: http://127.0.0.1:9000/smolfs-ci
           ACCESS_KEY: minioadmin
           SECRET_KEY: minioadmin
-        run: cargo test -p smolfs-juicefs --test minio_integration -- --nocapture
+        run: cargo test -p smolfs-juicefs --test minio_integration --test readonly_mount -- --nocapture
 
       - name: Build Python wheel
         run: uvx maturin==${{ env.MATURIN_VERSION }} build --manifest-path bindings/python/Cargo.toml --interpreter python --out dist
