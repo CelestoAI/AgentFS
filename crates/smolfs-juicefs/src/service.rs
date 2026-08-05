@@ -75,14 +75,20 @@ impl SmolFs {
         let mountpoint = absolute_path(&opts.path)?;
         let log_path = self.home.volume_log_path(&opts.name);
 
+        let readonly = opts.readonly;
         let command_opts = MountVolume {
             path: mountpoint.clone(),
             ..opts
         };
         self.juicefs.mount(&volume, &command_opts, &log_path)?;
-        probe_mount(&mountpoint)?;
+        if readonly {
+            probe_mount_readonly(&mountpoint)?;
+        } else {
+            probe_mount(&mountpoint)?;
+        }
 
         volume.mountpoint = Some(mountpoint.clone());
+        volume.read_only = readonly;
         volume.updated_at = now_rfc3339();
         self.registry.write(&volume)?;
 
@@ -95,6 +101,11 @@ impl SmolFs {
     pub fn flush(&self, name: &str) -> Result<()> {
         validate_volume_name(name)?;
         let volume = self.registry.read(name)?;
+        if volume.read_only {
+            return Err(SmolFsError::VolumeReadOnly {
+                name: name.to_string(),
+            });
+        }
         let mountpoint = volume
             .mountpoint
             .ok_or_else(|| SmolFsError::VolumeNotMounted {
@@ -118,6 +129,7 @@ impl SmolFs {
                 })?;
         self.juicefs.unmount(&mountpoint, force)?;
         volume.mountpoint = None;
+        volume.read_only = false;
         volume.updated_at = now_rfc3339();
         self.registry.write(&volume)
     }
@@ -177,6 +189,7 @@ impl SmolFs {
             bucket,
             dev: opts.dev,
             mountpoint: None,
+            read_only: false,
             created_at: now.clone(),
             updated_at: now,
         })
@@ -223,6 +236,16 @@ fn probe_mount(path: &Path) -> Result<()> {
     })
 }
 
+fn probe_mount_readonly(path: &Path) -> Result<()> {
+    // A read-only mount rejects writes, so verify liveness with a read instead.
+    fs::read_dir(path)
+        .map(|_| ())
+        .map_err(|source| SmolFsError::IoAt {
+            path: path.to_path_buf(),
+            source,
+        })
+}
+
 fn sync_probe(path: &Path) -> Result<()> {
     let probe = path.join(".smolfs-flush");
     let file = fs::File::create(&probe).map_err(|source| SmolFsError::IoAt {
@@ -239,4 +262,55 @@ fn sync_probe(path: &Path) -> Result<()> {
         let _ = std::process::Command::new("sync").status();
     }
     Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use std::os::unix::fs::PermissionsExt;
+
+    use smolfs_core::{Registry, SmolFsError, SmolFsHome, Volume};
+
+    use super::SmolFs;
+
+    fn stub_backend(home: &SmolFsHome) {
+        home.ensure_layout().unwrap();
+        let bin = home.managed_storage_backend_bin();
+        std::fs::write(&bin, b"#!/bin/sh\nexit 0\n").unwrap();
+        let mut perms = std::fs::metadata(&bin).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&bin, perms).unwrap();
+    }
+
+    fn mounted_volume(name: &str, read_only: bool) -> Volume {
+        Volume {
+            name: name.into(),
+            backend: "juicefs".into(),
+            metadata_url: "sqlite3://demo.db".into(),
+            storage: "file".into(),
+            bucket: "/tmp/objects".into(),
+            dev: true,
+            mountpoint: Some("/tmp/does-not-need-to-exist".into()),
+            read_only,
+            created_at: "now".into(),
+            updated_at: "now".into(),
+        }
+    }
+
+    #[test]
+    fn flush_errors_on_read_only_volume() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = SmolFsHome::new(temp.path());
+        stub_backend(&home);
+        Registry::new(home.clone())
+            .write(&mounted_volume("ro", true))
+            .unwrap();
+
+        let fs = SmolFs::new(home).unwrap();
+        // The read-only guard fires before any mount I/O, so no real mount is needed.
+        let err = fs.flush("ro").unwrap_err();
+        assert!(
+            matches!(err, SmolFsError::VolumeReadOnly { name } if name == "ro"),
+            "expected VolumeReadOnly error"
+        );
+    }
 }

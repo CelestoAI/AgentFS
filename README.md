@@ -216,6 +216,12 @@ Useful options:
   completes.
 - `--foreground` runs the mount process in the foreground instead of starting it
   in the background.
+- `--readonly` (alias `--read-only`) mounts the volume read-only. This is useful
+  for data the current agent should not modify, such as model weights,
+  training/evaluation data, or reference documents produced by another process.
+  Writes to a read-only mount are rejected by the filesystem with
+  `Read-only file system` (EROFS), and `smolfs flush NAME` returns an error
+  because there is nothing to flush.
 
 ### Flush, Inspect, and Unmount
 
@@ -258,9 +264,9 @@ cat ./workspace/hello.txt
 | `smolfs doctor` | Checks SmolFS storage, local mount support, and configuration. |
 | `smolfs init NAME --dev` | Creates a local development volume. |
 | `smolfs init NAME --metadata URL --storage TYPE --bucket BUCKET` | Creates a cloud volume with explicit metadata and object storage. |
-| `smolfs mount NAME PATH` | Mounts a volume at a local directory. |
-| `smolfs flush NAME` | Probes the mounted volume and syncs a small file through it. |
-| `smolfs status [NAME]` | Shows known volumes and current mountpoints. |
+| `smolfs mount NAME PATH` | Mounts a volume at a local directory. Add `--readonly` to mount read-only. |
+| `smolfs flush NAME` | Probes the mounted volume and syncs a small file through it. Errors on a read-only mount. |
+| `smolfs status [NAME]` | Shows known volumes, mountpoints, and mount mode (`ro`/`rw`). |
 | `smolfs unmount NAME` | Unmounts a mounted volume and asks SmolFS to flush. |
 | `smolfs umount NAME` | Alias for `smolfs unmount NAME`. |
 

@@ -60,6 +60,12 @@ enum Command {
         foreground: bool,
         #[arg(long, help = "Test object storage access before mounting")]
         check_storage: bool,
+        #[arg(
+            long,
+            visible_alias = "read-only",
+            help = "Mount the volume read-only; writes are rejected by the filesystem"
+        )]
+        readonly: bool,
     },
     #[command(about = "Show configured SmolFS volumes")]
     Status {
@@ -159,6 +165,7 @@ fn main() -> Result<()> {
             path,
             foreground,
             check_storage,
+            readonly,
         } => {
             let fs = SmolFs::from_env()?;
             let mount = fs.mount(MountVolume {
@@ -166,11 +173,13 @@ fn main() -> Result<()> {
                 path,
                 foreground,
                 check_storage,
+                readonly,
             })?;
             println!(
-                "Mounted volume {} at {}",
+                "Mounted volume {} at {}{}",
                 mount.name,
-                mount.mountpoint.display()
+                mount.mountpoint.display(),
+                if readonly { " (read-only)" } else { "" }
             );
         }
         Command::Status { name, json } => {
@@ -187,12 +196,20 @@ fn main() -> Result<()> {
                         .as_ref()
                         .map(|path| path.display().to_string())
                         .unwrap_or_else(|| "-".into());
+                    let mode = if volume.mountpoint.is_none() {
+                        "-"
+                    } else if volume.read_only {
+                        "ro"
+                    } else {
+                        "rw"
+                    };
                     println!(
-                        "{}\t{}\t{}\t{}",
+                        "{}\t{}\t{}\t{}\t{}",
                         volume.name,
                         if volume.dev { "dev" } else { "cloud" },
                         volume.storage,
-                        mountpoint
+                        mountpoint,
+                        mode
                     );
                 }
             }

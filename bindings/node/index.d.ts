@@ -15,6 +15,7 @@ export interface MountVolumeOptions {
   name: string
   path: string
   checkStorage?: boolean
+  readOnly?: boolean
 }
 export interface UnmountOptions {
   force?: boolean
@@ -26,6 +27,7 @@ export interface VolumeInfo {
   bucket: string
   dev: boolean
   mountpoint?: string
+  readOnly: boolean
 }
 export interface MountInfo {
   name: string

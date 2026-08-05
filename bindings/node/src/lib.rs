@@ -20,6 +20,7 @@ pub struct MountVolumeOptions {
     pub name: String,
     pub path: String,
     pub check_storage: Option<bool>,
+    pub read_only: Option<bool>,
 }
 
 #[napi(object)]
@@ -35,6 +36,7 @@ pub struct VolumeInfo {
     pub bucket: String,
     pub dev: bool,
     pub mountpoint: Option<String>,
+    pub read_only: bool,
 }
 
 #[napi(object)]
@@ -172,6 +174,7 @@ impl From<MountVolumeOptions> for MountVolume {
             path: PathBuf::from(value.path),
             foreground: false,
             check_storage: value.check_storage.unwrap_or(false),
+            readonly: value.read_only.unwrap_or(false),
         }
     }
 }
@@ -185,6 +188,7 @@ impl From<smolfs_core::VolumeInfo> for VolumeInfo {
             bucket: value.bucket,
             dev: value.dev,
             mountpoint: value.mountpoint.map(|path| path.display().to_string()),
+            read_only: value.read_only,
         }
     }
 }

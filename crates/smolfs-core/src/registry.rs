@@ -130,6 +130,7 @@ mod tests {
             bucket: "/tmp/objects".into(),
             dev: true,
             mountpoint: None,
+            read_only: false,
             created_at: "now".into(),
             updated_at: "now".into(),
         };
@@ -137,5 +138,29 @@ mod tests {
         registry.write(&volume).unwrap();
         assert_eq!(registry.read("demo").unwrap().name, "demo");
         assert_eq!(registry.list().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn reads_legacy_volume_without_read_only_field() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = SmolFsHome::new(temp.path());
+        home.ensure_layout().unwrap();
+        let path = home.volume_path("legacy");
+        // A volume record written before the read_only field existed.
+        let legacy = r#"
+name = "legacy"
+backend = "juicefs"
+metadata_url = "sqlite3://legacy.db"
+storage = "file"
+bucket = "/tmp/objects"
+dev = true
+created_at = "now"
+updated_at = "now"
+"#;
+        std::fs::write(&path, legacy).unwrap();
+
+        let registry = Registry::new(home);
+        let volume = registry.read("legacy").unwrap();
+        assert!(!volume.read_only);
     }
 }
