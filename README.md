@@ -1,14 +1,14 @@
 <div align="center">
 
-# SmolFS
+# AgentFS
 
 #### Durable workspace folders for AI agents.
 
 <img src="https://ik.imagekit.io/gradsflow/celestoai/logo/celesto%20cover%20low_vFigbRaJI.png">
 
-[![CI](https://github.com/CelestoAI/smolfs/actions/workflows/ci.yml/badge.svg)](https://github.com/CelestoAI/smolfs/actions/workflows/ci.yml)
-[![Publish CLI](https://github.com/CelestoAI/smolfs/actions/workflows/publish-cli.yml/badge.svg)](https://github.com/CelestoAI/smolfs/actions/workflows/publish-cli.yml)
-[![Publish Python Package](https://github.com/CelestoAI/smolfs/actions/workflows/publish-python.yml/badge.svg)](https://github.com/CelestoAI/smolfs/actions/workflows/publish-python.yml)
+[![CI](https://github.com/CelestoAI/AgentFS/actions/workflows/ci.yml/badge.svg)](https://github.com/CelestoAI/AgentFS/actions/workflows/ci.yml)
+[![Publish CLI](https://github.com/CelestoAI/AgentFS/actions/workflows/publish-cli.yml/badge.svg)](https://github.com/CelestoAI/AgentFS/actions/workflows/publish-cli.yml)
+[![Publish Python Package](https://github.com/CelestoAI/AgentFS/actions/workflows/publish-python.yml/badge.svg)](https://github.com/CelestoAI/AgentFS/actions/workflows/publish-python.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-orange.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust 1.85+](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-orange.svg)](https://www.python.org/downloads/)
@@ -19,11 +19,11 @@
 
 ---
 
-SmolFS gives agents a workspace folder that can survive after the agent process
+AgentFS gives agents a workspace folder that can survive after the agent process
 stops. You mount it like a normal directory, write files into it, unmount it
 when the job is done, and mount it again later from another process.
 
-SmolFS owns the developer experience around creating volumes, checking the
+AgentFS owns the developer experience around creating volumes, checking the
 machine, mounting, flushing, unmounting, and inspecting status. The storage
 backend is installed and managed for you.
 
@@ -81,14 +81,14 @@ backend is installed and managed for you.
 
 ## Quickstart
 
-Install SmolFS:
+Install AgentFS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CelestoAI/smolfs/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/CelestoAI/AgentFS/main/scripts/install.sh | sh
 ```
 
 The installer downloads the latest CLI release asset for your platform and
-installs SmolFS' managed storage backend. If no release asset exists yet, use the
+installs AgentFS' managed storage backend. If no release asset exists yet, use the
 source checkout flow in [Development](#development). Set
 `SMOLFS_INSTALL_BACKEND=0` if you only want to install the CLI. Set
 `SMOLFS_VERSION=dev` to try the latest successful build from `main`; tagged
@@ -107,14 +107,14 @@ smolfs mount demo ./workspace
 cat ./workspace/hello.txt
 ```
 
-SmolFS needs local mount support on the machine that mounts volumes. Mount
-support lets SmolFS provide a folder your tools can read and write.
+AgentFS needs local mount support on the machine that mounts volumes. Mount
+support lets AgentFS provide a folder your tools can read and write.
 
 <details>
 <summary>Install the Python SDK with the CLI</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CelestoAI/smolfs/main/scripts/install.sh | SMOLFS_INSTALL_PYTHON=1 sh
+curl -fsSL https://raw.githubusercontent.com/CelestoAI/AgentFS/main/scripts/install.sh | SMOLFS_INSTALL_PYTHON=1 sh
 ```
 
 The installer runs `uv add smolfs` from a directory with `pyproject.toml`, or
@@ -125,7 +125,7 @@ The installer runs `uv add smolfs` from a directory with `pyproject.toml`, or
 
 ## CLI Lifecycle
 
-The normal SmolFS flow is: check the machine, create a volume, mount it, use the
+The normal AgentFS flow is: check the machine, create a volume, mount it, use the
 directory, flush important writes, unmount it, and mount it again when you need
 the same files later.
 
@@ -137,29 +137,29 @@ Run `doctor` before creating or mounting volumes:
 smolfs doctor
 ```
 
-`doctor` checks whether SmolFS has its managed storage backend and whether the
+`doctor` checks whether AgentFS has its managed storage backend and whether the
 machine can mount local directories.
 
 Useful options:
 
-- `smolfs doctor --install` installs SmolFS' managed storage backend.
+- `smolfs doctor --install` installs AgentFS' managed storage backend.
 - `smolfs doctor --json` prints the same report as JSON for scripts.
 
-SmolFS looks for its home directory in `SMOLFS_HOME`. If it is not set, SmolFS
+AgentFS looks for its home directory in `SMOLFS_HOME`. If it is not set, AgentFS
 uses `~/.smolfs`. The home directory stores SmolFS config, volume records, logs,
 managed binaries, and local dev-volume data.
 
 ### Create a Local Volume
 
-A volume is the named workspace that SmolFS can mount later.
+A volume is the named workspace that AgentFS can mount later.
 
 ```bash
 smolfs init demo --dev
 ```
 
 `--dev` creates a local-only volume. It uses SQLite for metadata and local files
-for object data under the SmolFS home directory. This is the simplest path for
-trying SmolFS on one machine.
+for object data under the AgentFS home directory. This is the simplest path for
+trying AgentFS on one machine.
 
 ### Create a Cloud Volume
 
@@ -181,7 +181,7 @@ You can pass object storage in either of these forms:
   that expect an endpoint-style bucket URL.
 
 For Cloudflare R2 or another S3-compatible service, keep credentials in the
-environment used by SmolFS. Do not put access keys in command arguments or logs.
+environment used by AgentFS. Do not put access keys in command arguments or logs.
 
 ```bash
 set -a
@@ -207,12 +207,12 @@ echo hello > ./workspace/hello.txt
 cat ./workspace/hello.txt
 ```
 
-SmolFS creates the mount directory if it does not exist. After the mount
+AgentFS creates the mount directory if it does not exist. After the mount
 succeeds, programs can read and write files through that directory.
 
 Useful options:
 
-- `--check-storage` asks SmolFS to test object storage access before the mount
+- `--check-storage` asks AgentFS to test object storage access before the mount
   completes.
 - `--foreground` runs the mount process in the foreground instead of starting it
   in the background.
@@ -389,7 +389,7 @@ fs.ensureVolume({
 
 ## Security and Reliability
 
-SmolFS stores agent workspace data outside the sandbox lifecycle. Treat it like
+AgentFS stores agent workspace data outside the sandbox lifecycle. Treat it like
 durable infrastructure.
 
 - Do not log credentials, S3 access keys, Redis URLs with secrets, or mount
