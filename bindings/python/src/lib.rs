@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
@@ -129,13 +129,18 @@ impl PySmolFs {
             .map_err(to_py_err)
     }
 
-    fn flush(&self, name: String) -> PyResult<()> {
-        self.inner.flush(&name).map_err(to_py_err)
+    #[pyo3(signature = (name, *, mountpoint=None))]
+    fn flush(&self, name: String, mountpoint: Option<String>) -> PyResult<()> {
+        self.inner
+            .flush(&name, mountpoint.as_deref().map(Path::new))
+            .map_err(to_py_err)
     }
 
-    #[pyo3(signature = (name, *, force=false))]
-    fn unmount(&self, name: String, force: bool) -> PyResult<()> {
-        self.inner.unmount(&name, force).map_err(to_py_err)
+    #[pyo3(signature = (name, *, mountpoint=None, force=false))]
+    fn unmount(&self, name: String, mountpoint: Option<String>, force: bool) -> PyResult<()> {
+        self.inner
+            .unmount(&name, mountpoint.as_deref().map(Path::new), force)
+            .map_err(to_py_err)
     }
 
     #[pyo3(signature = (name=None))]

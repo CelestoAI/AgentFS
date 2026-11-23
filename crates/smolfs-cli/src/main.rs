@@ -78,11 +78,15 @@ enum Command {
     Flush {
         #[arg(help = "Mounted SmolFS volume name")]
         name: String,
+        #[arg(help = "Mountpoint to flush; required when the volume is mounted more than once")]
+        path: Option<PathBuf>,
     },
     #[command(about = "Unmount a SmolFS volume and wait for pending writes")]
     Unmount {
         #[arg(help = "Mounted SmolFS volume name")]
         name: String,
+        #[arg(help = "Mountpoint to unmount; required when the volume is mounted more than once")]
+        path: Option<PathBuf>,
         #[arg(long, help = "Force unmount a busy mountpoint")]
         force: bool,
     },
@@ -90,6 +94,8 @@ enum Command {
     Umount {
         #[arg(help = "Mounted SmolFS volume name")]
         name: String,
+        #[arg(help = "Mountpoint to unmount; required when the volume is mounted more than once")]
+        path: Option<PathBuf>,
         #[arg(long, help = "Force unmount a busy mountpoint")]
         force: bool,
     },
@@ -191,37 +197,32 @@ fn main() -> Result<()> {
                 println!("No volumes");
             } else {
                 for volume in status.volumes {
-                    let mountpoint = volume
-                        .mountpoint
-                        .as_ref()
-                        .map(|path| path.display().to_string())
-                        .unwrap_or_else(|| "-".into());
-                    let mode = if volume.mountpoint.is_none() {
-                        "-"
-                    } else if volume.read_only {
-                        "ro"
-                    } else {
-                        "rw"
-                    };
-                    println!(
-                        "{}\t{}\t{}\t{}\t{}",
-                        volume.name,
-                        if volume.dev { "dev" } else { "cloud" },
-                        volume.storage,
-                        mountpoint,
-                        mode
-                    );
+                    let kind = if volume.dev { "dev" } else { "cloud" };
+                    if volume.mounts.is_empty() {
+                        println!("{}\t{}\t{}\t-\t-", volume.name, kind, volume.storage);
+                    }
+                    // One line per mount, so every live mount is visible.
+                    for mount in &volume.mounts {
+                        println!(
+                            "{}\t{}\t{}\t{}\t{}",
+                            volume.name,
+                            kind,
+                            volume.storage,
+                            mount.mountpoint.display(),
+                            if mount.read_only { "ro" } else { "rw" }
+                        );
+                    }
                 }
             }
         }
-        Command::Flush { name } => {
+        Command::Flush { name, path } => {
             let fs = SmolFs::from_env()?;
-            fs.flush(&name)?;
+            fs.flush(&name, path.as_deref())?;
             println!("Flushed volume {name}");
         }
-        Command::Unmount { name, force } | Command::Umount { name, force } => {
+        Command::Unmount { name, path, force } | Command::Umount { name, path, force } => {
             let fs = SmolFs::from_env()?;
-            fs.unmount(&name, force)?;
+            fs.unmount(&name, path.as_deref(), force)?;
             println!("Unmounted volume {name}");
         }
     }

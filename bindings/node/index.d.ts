@@ -19,6 +19,7 @@ export interface MountVolumeOptions {
 }
 export interface UnmountOptions {
   force?: boolean
+  mountpoint?: string
 }
 export interface VolumeInfo {
   name: string
@@ -62,7 +63,7 @@ export declare class SmolFS {
   init(options: InitVolumeOptions): VolumeInfo
   ensureVolume(options: InitVolumeOptions): VolumeInfo
   mount(options: MountVolumeOptions): MountInfo
-  flush(name: string): void
+  flush(name: string, mountpoint?: string | undefined | null): void
   unmount(name: string, options?: UnmountOptions | undefined | null): void
   status(name?: string | undefined | null): Status
 }
