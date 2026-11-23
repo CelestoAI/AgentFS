@@ -112,7 +112,7 @@ fn write_atomic(path: &PathBuf, contents: &[u8]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::Volume;
+    use crate::models::{MountRecord, Volume};
     use crate::paths::SmolFsHome;
 
     use super::Registry;
@@ -129,15 +129,45 @@ mod tests {
             storage: "file".into(),
             bucket: "/tmp/objects".into(),
             dev: true,
-            mountpoint: None,
-            read_only: false,
             created_at: "now".into(),
             updated_at: "now".into(),
+            mounts: Vec::new(),
         };
 
         registry.write(&volume).unwrap();
         assert_eq!(registry.read("demo").unwrap().name, "demo");
         assert_eq!(registry.list().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn round_trips_multiple_mounts() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = SmolFsHome::new(temp.path());
+        let registry = Registry::new(home);
+        let mounts = vec![
+            MountRecord {
+                mountpoint: "/tmp/ro".into(),
+                read_only: true,
+            },
+            MountRecord {
+                mountpoint: "/tmp/rw".into(),
+                read_only: false,
+            },
+        ];
+        let volume = Volume {
+            name: "demo".into(),
+            backend: "juicefs".into(),
+            metadata_url: "sqlite3://demo.db".into(),
+            storage: "file".into(),
+            bucket: "/tmp/objects".into(),
+            dev: true,
+            created_at: "now".into(),
+            updated_at: "now".into(),
+            mounts: mounts.clone(),
+        };
+
+        registry.write(&volume).unwrap();
+        assert_eq!(registry.read("demo").unwrap().mounts, mounts);
     }
 
     #[test]
@@ -161,6 +191,6 @@ updated_at = "now"
 
         let registry = Registry::new(home);
         let volume = registry.read("legacy").unwrap();
-        assert!(!volume.read_only);
+        assert!(volume.mounts.is_empty());
     }
 }

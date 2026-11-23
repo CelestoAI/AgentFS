@@ -94,7 +94,7 @@ fn run_lifecycle(fs: &SmolFs, metadata: &MetadataBackend, bucket: &str, root: &P
 
     // flush must error loudly on a read-only mount.
     let flush_err = fs
-        .flush(&name)
+        .flush(&name, None)
         .expect_err("flush on read-only mount must fail");
     assert!(
         matches!(flush_err, SmolFsError::VolumeReadOnly { .. }),
@@ -102,7 +102,7 @@ fn run_lifecycle(fs: &SmolFs, metadata: &MetadataBackend, bucket: &str, root: &P
         metadata.name
     );
 
-    fs.unmount(&name, false).expect("unmount read-only");
+    fs.unmount(&name, None, false).expect("unmount read-only");
 
     // --- Read-write remount: writes and flush must work again ---
     let rw_dir = root.join(format!("{}-rw", metadata.name));
@@ -123,9 +123,57 @@ fn run_lifecycle(fs: &SmolFs, metadata: &MetadataBackend, bucket: &str, root: &P
     );
 
     std::fs::write(rw_dir.join("ok.txt"), b"allowed").expect("write to a read-write mount");
-    fs.flush(&name).expect("flush a read-write mount");
+    fs.flush(&name, None).expect("flush a read-write mount");
 
-    fs.unmount(&name, false).expect("unmount read-write");
+    // --- Concurrent read-only mount of the same volume (issue #16) ---
+    fs.mount(MountVolume {
+        name: name.clone(),
+        path: ro_dir.clone(),
+        foreground: false,
+        check_storage: false,
+        readonly: true,
+    })
+    .unwrap_or_else(|err| panic!("concurrent ro mount with {} metadata: {err}", metadata.name));
+
+    let mounts = fs.status(Some(&name)).expect("status").volumes[0]
+        .mounts
+        .clone();
+    assert_eq!(
+        mounts.len(),
+        2,
+        "{}: both mounts are tracked",
+        metadata.name
+    );
+    assert_eq!(
+        std::fs::read(ro_dir.join("ok.txt")).expect("read rw write through ro mount"),
+        b"allowed"
+    );
+
+    let err = fs
+        .unmount(&name, None, false)
+        .expect_err("unmount without a mountpoint is ambiguous");
+    assert!(
+        matches!(err, SmolFsError::AmbiguousMount { .. }),
+        "{}: expected AmbiguousMount, got {err:?}",
+        metadata.name
+    );
+    fs.flush(&name, Some(&rw_dir))
+        .expect("flush the read-write mount by mountpoint");
+
+    fs.unmount(&name, Some(&ro_dir), false)
+        .expect("unmount read-only by mountpoint");
+    let mounts = fs.status(Some(&name)).expect("status").volumes[0]
+        .mounts
+        .clone();
+    assert_eq!(
+        mounts.len(),
+        1,
+        "{}: rw mount is still tracked",
+        metadata.name
+    );
+    std::fs::write(rw_dir.join("still.txt"), b"mounted").expect("rw mount still works");
+
+    fs.unmount(&name, None, false).expect("unmount read-write");
 }
 
 fn metadata_backends(root: &Path) -> Vec<MetadataBackend> {

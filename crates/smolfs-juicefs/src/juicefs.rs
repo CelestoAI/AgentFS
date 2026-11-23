@@ -124,10 +124,9 @@ mod tests {
             storage: "file".into(),
             bucket: "/tmp/objects".into(),
             dev: true,
-            mountpoint: None,
-            read_only: false,
             created_at: "now".into(),
             updated_at: "now".into(),
+            mounts: Vec::new(),
         }
     }
 

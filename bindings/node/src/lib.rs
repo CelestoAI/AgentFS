@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use napi::{Error, Result};
 use napi_derive::napi;
@@ -26,6 +26,7 @@ pub struct MountVolumeOptions {
 #[napi(object)]
 pub struct UnmountOptions {
     pub force: Option<bool>,
+    pub mountpoint: Option<String>,
 }
 
 #[napi(object)]
@@ -125,14 +126,20 @@ impl SmolFs {
     }
 
     #[napi]
-    pub fn flush(&self, name: String) -> Result<()> {
-        self.inner.flush(&name).map_err(to_napi_err)
+    pub fn flush(&self, name: String, mountpoint: Option<String>) -> Result<()> {
+        self.inner
+            .flush(&name, mountpoint.as_deref().map(Path::new))
+            .map_err(to_napi_err)
     }
 
     #[napi]
     pub fn unmount(&self, name: String, options: Option<UnmountOptions>) -> Result<()> {
-        let force = options.and_then(|options| options.force).unwrap_or(false);
-        self.inner.unmount(&name, force).map_err(to_napi_err)
+        let (force, mountpoint) = options
+            .map(|options| (options.force.unwrap_or(false), options.mountpoint))
+            .unwrap_or_default();
+        self.inner
+            .unmount(&name, mountpoint.as_deref().map(Path::new), force)
+            .map_err(to_napi_err)
     }
 
     #[napi]

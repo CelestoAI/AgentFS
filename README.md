@@ -250,6 +250,17 @@ smolfs unmount demo
 `smolfs umount demo` if you prefer the shorter alias. Add `--force` when the
 mountpoint is busy and you want SmolFS to force the unmount.
 
+You can mount the same volume at more than one path, for example once
+read-only and once read-write. `status` shows one line per mount. When a
+volume has more than one mount, pass the path to `flush` or `unmount` so
+SmolFS knows which one you mean:
+
+```bash
+smolfs mount --readonly demo ./reader
+smolfs mount demo ./writer
+smolfs unmount demo ./reader
+```
+
 After unmounting, you can mount the same volume again and read the files:
 
 ```bash
@@ -265,10 +276,10 @@ cat ./workspace/hello.txt
 | `smolfs init NAME --dev` | Creates a local development volume. |
 | `smolfs init NAME --metadata URL --storage TYPE --bucket BUCKET` | Creates a cloud volume with explicit metadata and object storage. |
 | `smolfs mount NAME PATH` | Mounts a volume at a local directory. Add `--readonly` to mount read-only. |
-| `smolfs flush NAME` | Probes the mounted volume and syncs a small file through it. Errors on a read-only mount. |
-| `smolfs status [NAME]` | Shows known volumes, mountpoints, and mount mode (`ro`/`rw`). |
-| `smolfs unmount NAME` | Unmounts a mounted volume and asks SmolFS to flush. |
-| `smolfs umount NAME` | Alias for `smolfs unmount NAME`. |
+| `smolfs flush NAME [PATH]` | Probes the mounted volume and syncs a small file through it. Errors on a read-only mount. Pass `PATH` when the volume is mounted more than once. |
+| `smolfs status [NAME]` | Shows known volumes and each mount with its mode (`ro`/`rw`). |
+| `smolfs unmount NAME [PATH]` | Unmounts a mounted volume and asks SmolFS to flush. Pass `PATH` when the volume is mounted more than once. |
+| `smolfs umount NAME [PATH]` | Alias for `smolfs unmount`. |
 
 Every command has its own help page:
 

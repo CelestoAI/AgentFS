@@ -42,6 +42,21 @@ pub enum SmolFsError {
     #[error("volume {name:?} is mounted read-only")]
     VolumeReadOnly { name: String },
 
+    #[error("volume {name:?} is already mounted at {path}")]
+    AlreadyMountedAt { name: String, path: PathBuf },
+
+    #[error("volume {name:?} is not mounted at {path}")]
+    NotMountedAt { name: String, path: PathBuf },
+
+    #[error(
+        "volume {name:?} is mounted at more than one path ({}); pass the mountpoint to choose one",
+        mountpoints.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(", ")
+    )]
+    AmbiguousMount {
+        name: String,
+        mountpoints: Vec<PathBuf>,
+    },
+
     #[error("local mount support is unavailable: {detail}\nFix: {fix}")]
     MountSupportUnavailable { detail: String, fix: String },
 

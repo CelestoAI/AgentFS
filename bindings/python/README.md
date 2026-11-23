@@ -85,8 +85,9 @@ logs or store them in source files.
   existing volume if it does.
 - `init(...)` creates a new volume.
 - `mount(name, path)` mounts a volume at a local directory.
-- `flush(name)` asks SmolFS to sync important writes.
-- `unmount(name)` unmounts a mounted volume.
+- `flush(name, mountpoint=None)` asks SmolFS to sync important writes.
+- `unmount(name, mountpoint=None)` unmounts a mounted volume. Pass
+  `mountpoint` when the volume is mounted more than once.
 - `status(name=None)` lists known volumes and mountpoints.
 
 ## Links
